@@ -272,7 +272,7 @@ def convert_compound(value, from_info, to_info, custom=None, use_base10=False):
 
 
 def parse_value_with_unit(token):
-    m = re.match(r'^([\d.eE+\-*/()]+)([a-zA-Z]+)$', token)
+    m = re.match(r'^([\d.eE+\-*/()]+)([a-zA-Z/]+)$', token)
     if m:
         val_str = m.group(1)
         unit_str = m.group(2)
@@ -330,6 +330,24 @@ def eval_unit_expr(expr_str, custom=None, use_base10=False):
     tokens = tokenize_expr(expr_str)
     if not tokens:
         return None
+
+    merged = []
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+        if (i + 1 < len(tokens) and
+                safe_eval_expr(t) is not None and
+                re.match(r'^[a-zA-Z/]+$', tokens[i + 1]) and
+                tokens[i + 1] not in ("to", "in")):
+            unit_key = resolve_unit(tokens[i + 1])
+            if unit_key or parse_compound_unit(tokens[i + 1]):
+                merged.append(t + tokens[i + 1])
+                i += 2
+                continue
+        merged.append(t)
+        i += 1
+    tokens = merged
+
     values = []
     operators = []
 
